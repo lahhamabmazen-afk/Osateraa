@@ -712,6 +712,11 @@
     tbody td.notes-cell span { max-width: none; white-space: normal; text-align: left; }
     tbody td { font-size: 0.82rem; }
   }
+
+  @media (max-width: 768px) {
+    .header-actions { flex-wrap: wrap; }
+    .user-chip { flex: 1 1 100%; order: -1; }
+  }
 </style>
 </head>
 <body>
@@ -743,6 +748,8 @@
   <div class="header-actions">
     <span id="currentDate" style="font-size:0.75rem; color:var(--text-muted); font-family:'Tajawal',sans-serif;"></span>
     <span class="user-chip" id="userChip"></span>
+    <button class="btn btn-ghost" id="teamBtn" style="display:none" onclick="openTeam()">👥 الموظفون</button>
+    <button class="btn btn-ghost" onclick="openPw()" title="تغيير كلمة المرور" aria-label="تغيير كلمة المرور">🔑</button>
     <button class="btn btn-ghost" onclick="logout()">خروج</button>
     <button class="btn btn-gold" onclick="openModal()">＋ معاملة جديدة</button>
   </div>
@@ -752,43 +759,7 @@
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-section-title">الموظفون</div>
-    <ul class="staff-list" id="staffList">
-      <li class="staff-item active" data-staff="all" onclick="filterStaff('all',this)">
-        <div class="staff-avatar" style="background:linear-gradient(135deg,#C9A84C,#8a6d2a);">🏛</div>
-        <span class="staff-name">الكل</span>
-        <span class="staff-count" id="count-all">0</span>
-      </li>
-      <li class="staff-item" data-staff="رافت" onclick="filterStaff('رافت',this)">
-        <div class="staff-avatar" style="background:linear-gradient(135deg,#2ECC8A,#1a8a5a);">ر</div>
-        <span class="staff-name">رافت</span>
-        <span class="staff-count" id="count-رافت">0</span>
-      </li>
-      <li class="staff-item" data-staff="ايات" onclick="filterStaff('ايات',this)">
-        <div class="staff-avatar" style="background:linear-gradient(135deg,#E85C5C,#8a2a2a);">آ</div>
-        <span class="staff-name">ايات</span>
-        <span class="staff-count" id="count-ايات">0</span>
-      </li>
-      <li class="staff-item" data-staff="معاذ" onclick="filterStaff('معاذ',this)">
-        <div class="staff-avatar" style="background:linear-gradient(135deg,#5C9EE8,#2a5a8a);">م</div>
-        <span class="staff-name">معاذ</span>
-        <span class="staff-count" id="count-معاذ">0</span>
-      </li>
-      <li class="staff-item" data-staff="سلطان" onclick="filterStaff('سلطان',this)">
-        <div class="staff-avatar" style="background:linear-gradient(135deg,#E8A84C,#8a5a1a);">س</div>
-        <span class="staff-name">سلطان</span>
-        <span class="staff-count" id="count-سلطان">0</span>
-      </li>
-      <li class="staff-item" data-staff="فراس" onclick="filterStaff('فراس',this)">
-        <div class="staff-avatar" style="background:linear-gradient(135deg,#9B7FE8,#5a3a8a);">ف</div>
-        <span class="staff-name">فراس</span>
-        <span class="staff-count" id="count-فراس">0</span>
-      </li>
-      <li class="staff-item" data-staff="ضياء" onclick="filterStaff('ضياء',this)">
-        <div class="staff-avatar" style="background:linear-gradient(135deg,#E8C97A,#9a7a30);">ض</div>
-        <span class="staff-name">ضياء</span>
-        <span class="staff-count" id="count-ضياء">0</span>
-      </li>
-    </ul>
+    <ul class="staff-list" id="staffList"></ul>
 
     <div class="sidebar-section-title">نوع المعاملة</div>
     <ul class="type-filter">
@@ -968,6 +939,52 @@
   </div>
 </div>
 
+<!-- TEAM MODAL -->
+<div class="modal-overlay" id="teamOverlay" onclick="if(event.target===this) closeTeam()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-title">إدارة الموظفين</span>
+      <button class="modal-close" onclick="closeTeam()">✕</button>
+    </div>
+    <div class="modal-body" style="grid-template-columns:1fr">
+      <div id="teamRows"></div>
+      <div class="form-group">
+        <label for="newMember">إضافة موظف</label>
+        <div style="display:flex;gap:8px">
+          <input id="newMember" maxlength="60" placeholder="الاسم" style="flex:1;min-width:0">
+          <button class="btn btn-gold" onclick="addMember()">إضافة</button>
+        </div>
+      </div>
+      <p style="font-size:.72rem;color:var(--text-muted);line-height:1.7">إيقاف الموظف يخفيه من القوائم عند إضافة معاملة جديدة، وتبقى معاملاته القديمة كما هي. تغيير الاسم يعدّله في كل معاملاته أيضاً.</p>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD MODAL -->
+<div class="modal-overlay" id="pwOverlay" onclick="if(event.target===this) closePw()">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-title">تغيير كلمة المرور</span>
+      <button class="modal-close" onclick="closePw()">✕</button>
+    </div>
+    <div class="modal-body" style="grid-template-columns:1fr">
+      <div class="form-group">
+        <label for="pw1">كلمة المرور الجديدة (8 أحرف على الأقل)</label>
+        <input id="pw1" type="password" autocomplete="new-password" dir="ltr" style="text-align:left">
+      </div>
+      <div class="form-group">
+        <label for="pw2">أعد كتابتها</label>
+        <input id="pw2" type="password" autocomplete="new-password" dir="ltr" style="text-align:left">
+      </div>
+      <div id="pwMsg" role="alert" style="min-height:20px;font-size:.78rem;color:var(--red)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closePw()">إلغاء</button>
+      <button class="btn btn-gold" onclick="savePw()">حفظ</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -979,10 +996,12 @@
   let filterTypeVal = 'all';
   let searchVal = '';
 
-  const staffColors = {
-    'رافت': '#2ECC8A', 'ايات': '#E85C5C', 'معاذ': '#5C9EE8',
-    'سلطان': '#E8A84C', 'فراس': '#9B7FE8', 'ضياء': '#E8C97A'
-  };
+  const PALETTE = ['#2ECC8A', '#E85C5C', '#5C9EE8', '#E8A84C', '#9B7FE8', '#E8C97A', '#4FC3C3', '#E87FB0'];
+  function colorOf(name) {
+    let i = team.findIndex(t => t.name === name);
+    if (i < 0) { let h = 0; for (const c of String(name || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; i = h; }
+    return PALETTE[i % PALETTE.length];
+  }
 
   const typeClasses = {
     'التنازل المالي': 'badge-tanazol',
@@ -1020,6 +1039,7 @@
       return matchStaff && matchType && matchSearch;
     });
 
+    renderTeamUI();
     renderTable(filtered);
     updateStats();
     updateCounts();
@@ -1041,7 +1061,7 @@
       const tc = typeClasses[r.type] || 'badge-faragh';
       const ti = typeIcons[r.type] || '📋';
       const sc = statusClasses[r.status] || 'status-pending';
-      const sc2 = staffColors[r.staff] || '#C9A84C';
+      const sc2 = colorOf(r.staff);
 
       const who = e => e ? esc(String(e).split('@')[0]) : '—';
       const fmtTime = t => { try { return t ? new Date(t).toLocaleString('ar-SY', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; } catch { return ''; } };
@@ -1105,12 +1125,118 @@
   }
 
   function updateCounts() {
-    const staffNames = ['رافت','ايات','معاذ','سلطان','فراس','ضياء'];
-    document.getElementById('count-all').textContent = records.length;
-    staffNames.forEach(s => {
-      const el = document.getElementById('count-' + s);
-      if (el) el.textContent = records.filter(r => r.staff === s).length;
+    document.querySelectorAll('#staffList .staff-item').forEach(li => {
+      const st = li.dataset.staff;
+      const el = li.querySelector('.staff-count');
+      if (el) el.textContent = st === 'all' ? records.length : records.filter(r => r.staff === st).length;
     });
+  }
+
+  // --- TEAM ---
+  let team = [];
+
+  function staffOptionNames() {
+    const act = team.filter(t => t.active).map(t => t.name);
+    const extra = [...new Set(records.map(r => r.staff))].filter(n => n && !act.includes(n));
+    return [...act, ...extra];
+  }
+
+  function renderTeamUI() {
+    const names = staffOptionNames();
+    const ul = document.getElementById('staffList');
+    ul.innerHTML = `<li class="staff-item" data-staff="all" onclick="filterStaff('all',this)">
+        <div class="staff-avatar" style="background:linear-gradient(135deg,#C9A84C,#8a6d2a);">🏛</div>
+        <span class="staff-name">الكل</span><span class="staff-count">0</span></li>` +
+      names.map(n => {
+        const c = colorOf(n);
+        return `<li class="staff-item" data-staff="${esc(n)}" onclick="filterStaff(this.dataset.staff,this)">
+          <div class="staff-avatar" style="background:linear-gradient(135deg,${c},${c}99);">${esc(String(n).trim().charAt(0))}</div>
+          <span class="staff-name">${esc(n)}</span><span class="staff-count">0</span></li>`;
+      }).join('');
+    ul.querySelectorAll('.staff-item').forEach(li => { if (li.dataset.staff === filterStaffVal) li.classList.add('active'); });
+    const mf = document.getElementById('mf-staff');
+    if (mf) {
+      mf.innerHTML = '<option value="all">كل الموظفين</option>' + names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      mf.value = names.includes(filterStaffVal) ? filterStaffVal : 'all';
+    }
+  }
+
+  function fillStaffSelect(current) {
+    const sel = document.getElementById('f-staff');
+    const act = team.filter(t => t.active).map(t => t.name);
+    if (current && !act.includes(current)) act.push(current);
+    sel.innerHTML = '<option value="">-- اختر الموظف --</option>' + act.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  }
+
+  async function loadTeam() {
+    const { data, error } = await sb.from('team_members').select('*').order('sort', { ascending: true }).order('id', { ascending: true });
+    if (error) { showToast('⚠️ تعذر تحميل قائمة الموظفين', 'var(--red)'); return; }
+    team = data || [];
+    render();
+  }
+
+  function openTeam() { renderTeamRows(); document.getElementById('teamOverlay').classList.add('active'); }
+  function closeTeam() { document.getElementById('teamOverlay').classList.remove('active'); }
+
+  function renderTeamRows() {
+    const box = document.getElementById('teamRows');
+    if (!team.length) { box.innerHTML = '<p style="color:var(--text-muted);font-size:.85rem">لا يوجد موظفون بعد. أضف أول موظف من الأسفل.</p>'; return; }
+    box.innerHTML = team.map(m => `
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+        <span style="width:10px;height:10px;border-radius:50%;background:${colorOf(m.name)}"></span>
+        <span style="flex:1;font-weight:700;${m.active ? '' : 'opacity:.45;text-decoration:line-through'}">${esc(m.name)}</span>
+        <button class="action-btn edit" title="تعديل الاسم" onclick="renameMember(${m.id})">✏️</button>
+        <button class="action-btn" title="${m.active ? 'إيقاف' : 'تفعيل'}" onclick="toggleMember(${m.id})">${m.active ? '⏸' : '▶️'}</button>
+      </div>`).join('');
+  }
+
+  async function addMember() {
+    const inp = document.getElementById('newMember');
+    const name = inp.value.trim();
+    if (!name) return;
+    const sort = team.reduce((m, t) => Math.max(m, t.sort || 0), 0) + 1;
+    const { error } = await sb.from('team_members').insert({ name, sort });
+    if (error) { showToast(error.code === '23505' ? '⚠️ هذا الاسم موجود بالفعل' : '⚠️ تعذرت الإضافة', 'var(--orange)'); return; }
+    inp.value = '';
+    await loadTeam(); renderTeamRows();
+    showToast('✅ تمت إضافة الموظف');
+  }
+
+  async function toggleMember(id) {
+    const m = team.find(t => t.id === id); if (!m) return;
+    const { error } = await sb.from('team_members').update({ active: !m.active }).eq('id', id);
+    if (error) { showToast('⚠️ تعذر التحديث', 'var(--red)'); return; }
+    await loadTeam(); renderTeamRows();
+  }
+
+  async function renameMember(id) {
+    const m = team.find(t => t.id === id); if (!m) return;
+    const nn = prompt('الاسم الجديد:', m.name);
+    const name = nn && nn.trim();
+    if (!name || name === m.name) return;
+    const { error } = await sb.from('team_members').update({ name }).eq('id', id);
+    if (error) { showToast(error.code === '23505' ? '⚠️ هذا الاسم موجود بالفعل' : '⚠️ تعذر تعديل الاسم', 'var(--orange)'); return; }
+    await sb.from('records').update({ staff: name }).eq('staff', m.name);
+    await loadTeam(); await loadRecords(); renderTeamRows();
+    showToast('✅ تم تعديل الاسم');
+  }
+
+  // --- PASSWORD ---
+  function openPw() {
+    ['pw1', 'pw2'].forEach(i => document.getElementById(i).value = '');
+    document.getElementById('pwMsg').textContent = '';
+    document.getElementById('pwOverlay').classList.add('active');
+  }
+  function closePw() { document.getElementById('pwOverlay').classList.remove('active'); }
+  async function savePw() {
+    const a = document.getElementById('pw1').value, b = document.getElementById('pw2').value;
+    const msg = document.getElementById('pwMsg');
+    if (a.length < 8) { msg.textContent = 'كلمة المرور قصيرة، اكتب 8 أحرف على الأقل'; return; }
+    if (a !== b) { msg.textContent = 'الكلمتان غير متطابقتين'; return; }
+    const { error } = await sb.auth.updateUser({ password: a });
+    if (error) { msg.textContent = 'تعذر التغيير. سجّل الخروج ثم الدخول من جديد وأعد المحاولة.'; return; }
+    closePw();
+    showToast('✅ تم تغيير كلمة المرور');
   }
 
   function formatNum(n) {
@@ -1154,6 +1280,7 @@
   // --- MODAL ---
   function openModal(id = null) {
     editId = id;
+    fillStaffSelect(id ? (records.find(x => x.id === id) || {}).staff : null);
     document.getElementById('modalTitle').textContent = id ? 'تعديل المعاملة' : 'إضافة معاملة جديدة';
 
     if (id) {
@@ -1215,7 +1342,7 @@
     const { data } = await sb.auth.getSession();
     if (data.session) await enterApp(data.session.user); else showLogin();
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && currentUser) loadRecords();
+      if (!document.hidden && currentUser) { loadTeam(); loadRecords(); }
     });
   }
 
@@ -1242,13 +1369,17 @@
     isOwner = row.role === 'owner';
     document.getElementById('userChip').textContent = user.email + (isOwner ? ' (المدير)' : '');
     document.getElementById('loginOverlay').classList.add('hidden');
+    document.getElementById('teamBtn').style.display = isOwner ? '' : 'none';
+    await loadTeam();
     await loadRecords();
     subscribe();
   }
 
   function leaveApp() {
     if (channel && sb) { sb.removeChannel(channel); channel = null; }
-    records = []; currentUser = null; isOwner = false;
+    records = []; team = []; currentUser = null; isOwner = false;
+    document.getElementById('teamBtn').style.display = 'none';
+    closeTeam(); closePw();
     document.getElementById('userChip').textContent = '';
     render();
     showLogin();
