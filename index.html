@@ -699,6 +699,19 @@
     tbody td.cell-actions::before { display: none; }
     .action-btn { width: 40px; height: 40px; }
   }
+
+  /* DETAILS */
+  textarea { resize: vertical; min-height: 80px; }
+  .lnk { color: var(--blue); text-decoration: none; }
+  .notes-cell span { display: block; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-filters { display: none; }
+  @media (max-width: 768px) {
+    .mobile-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .mobile-filters select { font-size: 16px; padding: 0.65rem 0.6rem; }
+    tbody td.m-empty { display: none; }
+    tbody td.notes-cell span { max-width: none; white-space: normal; text-align: left; }
+    tbody td { font-size: 0.82rem; }
+  }
 </style>
 </head>
 <body>
@@ -831,6 +844,18 @@
     </div>
 
     <!-- TABLE -->
+    <div class="mobile-filters">
+      <select id="mf-staff" onchange="mobileFilter()" aria-label="الموظف">
+        <option value="all">كل الموظفين</option>
+        <option value="رافت">رافت</option><option value="ايات">ايات</option><option value="معاذ">معاذ</option>
+        <option value="سلطان">سلطان</option><option value="فراس">فراس</option><option value="ضياء">ضياء</option>
+      </select>
+      <select id="mf-type" onchange="mobileFilter()" aria-label="نوع المعاملة">
+        <option value="all">كل الأنواع</option>
+        <option value="التنازل المالي">التنازل المالي</option><option value="حكم المحكمة">حكم المحكمة</option>
+        <option value="احالة المحكمة">احالة المحكمة</option><option value="الفراغ">الفراغ</option>
+      </select>
+    </div>
     <div class="table-wrapper">
       <table>
         <thead>
@@ -844,6 +869,11 @@
             <th>المقبوضات</th>
             <th>الأجور</th>
             <th>التاريخ</th>
+            <th>رقم الملف</th>
+            <th>الهاتف</th>
+            <th>ملاحظات</th>
+            <th>أضافها</th>
+            <th>آخر تعديل</th>
             <th>إجراءات</th>
           </tr>
         </thead>
@@ -869,7 +899,7 @@
     <div class="modal-body">
       <div class="form-group full">
         <label>اسم الزبون</label>
-        <input type="text" id="f-client" placeholder="أدخل اسم الزبون">
+        <input type="text" id="f-client" maxlength="200" placeholder="أدخل اسم الزبون">
       </div>
       <div class="form-group">
         <label>نوع المعاملة</label>
@@ -917,6 +947,18 @@
       <div class="form-group">
         <label>التاريخ</label>
         <input type="date" id="f-date">
+      </div>
+      <div class="form-group">
+        <label>رقم هاتف الزبون</label>
+        <input type="tel" id="f-phone" inputmode="tel" maxlength="40" placeholder="09xxxxxxxx" dir="ltr" style="text-align:right">
+      </div>
+      <div class="form-group">
+        <label>رقم العقار أو الملف</label>
+        <input type="text" id="f-fileno" maxlength="80" placeholder="مثال: 1319/5">
+      </div>
+      <div class="form-group full">
+        <label>ملاحظات</label>
+        <textarea id="f-notes" maxlength="2000" rows="3" placeholder="أي تفاصيل إضافية عن المعاملة"></textarea>
       </div>
     </div>
     <div class="modal-footer">
@@ -974,7 +1016,7 @@
     let filtered = records.filter(r => {
       const matchStaff = filterStaffVal === 'all' || r.staff === filterStaffVal;
       const matchType = filterTypeVal === 'all' || r.type === filterTypeVal;
-      const matchSearch = !searchVal || r.client.includes(searchVal) || r.type.includes(searchVal) || r.staff.includes(searchVal);
+      const matchSearch = !searchVal || r.client.includes(searchVal) || r.type.includes(searchVal) || r.staff.includes(searchVal) || (r.phone || '').includes(searchVal) || (r.file_no || '').includes(searchVal) || (r.notes || '').includes(searchVal);
       return matchStaff && matchType && matchSearch;
     });
 
@@ -1001,6 +1043,8 @@
       const sc = statusClasses[r.status] || 'status-pending';
       const sc2 = staffColors[r.staff] || '#C9A84C';
 
+      const who = e => e ? esc(String(e).split('@')[0]) : '—';
+      const fmtTime = t => { try { return t ? new Date(t).toLocaleString('ar-SY', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; } catch { return ''; } };
       const fmt = n => n > 0 ? Number(n).toLocaleString('ar-SY') + ' ل.س' : '—';
       const pClass = r.paid > 0 ? 'paid' : 'zero';
       const rClass = r.received > 0 ? 'received' : 'zero';
@@ -1030,6 +1074,11 @@
           <td data-label="المقبوضات"><span class="amount ${rClass}">${fmt(r.received)}</span></td>
           <td data-label="الأجور"><span class="amount ${wClass}">${fmt(r.wages)}</span></td>
           <td data-label="التاريخ" style="color:var(--text-muted); font-size:0.75rem;">${formatDate(r.date)}</td>
+          <td data-label="رقم الملف" class="${r.file_no ? '' : 'm-empty'}">${esc(r.file_no) || '—'}</td>
+          <td data-label="الهاتف" class="${r.phone ? '' : 'm-empty'}">${r.phone ? `<a class="lnk" href="tel:${esc(r.phone)}">${esc(r.phone)}</a>` : '—'}</td>
+          <td data-label="ملاحظات" class="notes-cell ${r.notes ? '' : 'm-empty'}"><span title="${esc(r.notes)}">${esc(r.notes) || '—'}</span></td>
+          <td data-label="أضافها" style="font-size:0.75rem;">${who(r.created_by_email)}</td>
+          <td data-label="آخر تعديل" style="font-size:0.75rem;">${who(r.updated_by_email)}<br><span style="color:var(--text-muted)">${fmtTime(r.updated_at)}</span></td>
           <td class="cell-actions">
             <button class="action-btn edit" onclick="editRecord(${r.id})" title="تعديل">✏️</button>
             ${isOwner ? `<button class="action-btn delete" onclick="deleteRecord(${r.id})" title="حذف">🗑️</button>` : ''}
@@ -1091,6 +1140,12 @@
     render();
   }
 
+  function mobileFilter() {
+    filterStaffVal = document.getElementById('mf-staff').value;
+    filterTypeVal = document.getElementById('mf-type').value;
+    render();
+  }
+
   function searchData() {
     searchVal = document.getElementById('searchInput').value.trim();
     render();
@@ -1112,9 +1167,12 @@
         document.getElementById('f-received').value = r.received;
         document.getElementById('f-wages').value = r.wages;
         document.getElementById('f-date').value = r.date;
+        document.getElementById('f-phone').value = r.phone || '';
+        document.getElementById('f-fileno').value = r.file_no || '';
+        document.getElementById('f-notes').value = r.notes || '';
       }
     } else {
-      ['f-client','f-paid','f-received','f-wages'].forEach(id => document.getElementById(id).value = '');
+      ['f-client','f-paid','f-received','f-wages','f-phone','f-fileno','f-notes'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('f-type').value = '';
       document.getElementById('f-status').value = 'قيد التنفيذ';
       document.getElementById('f-staff').value = '';
@@ -1238,12 +1296,15 @@
     const received = Number(document.getElementById('f-received').value) || 0;
     const wages = Number(document.getElementById('f-wages').value) || 0;
     const date = document.getElementById('f-date').value || null;
+    const phone = document.getElementById('f-phone').value.trim() || null;
+    const file_no = document.getElementById('f-fileno').value.trim() || null;
+    const notes = document.getElementById('f-notes').value.trim() || null;
 
     if (!client) { showToast('⚠️ يرجى إدخال اسم الزبون', 'var(--orange)'); return; }
     if (!type) { showToast('⚠️ يرجى اختيار نوع المعاملة', 'var(--orange)'); return; }
     if (!staff) { showToast('⚠️ يرجى اختيار مستلم المعاملة', 'var(--orange)'); return; }
 
-    const payload = { client, type, status, staff, paid, received, wages, date };
+    const payload = { client, type, status, staff, paid, received, wages, date, phone, file_no, notes };
     saving = true;
     try {
       if (editId) {
@@ -1282,8 +1343,8 @@
   // --- EXPORT ---
   function exportCSV() {
     if (records.length === 0) { showToast('⚠️ لا توجد بيانات للتصدير', 'var(--orange)'); return; }
-    const headers = ['#', 'اسم الزبون', 'نوع المعاملة', 'حالة المعاملة', 'مستلم المعاملة', 'المدفوعات', 'المقبوضات', 'الأجور', 'التاريخ'];
-    const rows = records.map((r, i) => [i+1, r.client, r.type, r.status, r.staff, r.paid, r.received, r.wages, r.date]);
+    const headers = ['#', 'اسم الزبون', 'نوع المعاملة', 'حالة المعاملة', 'مستلم المعاملة', 'المدفوعات', 'المقبوضات', 'الأجور', 'التاريخ', 'رقم الملف', 'الهاتف', 'ملاحظات', 'أضافها', 'آخر تعديل'];
+    const rows = records.map((r, i) => [i+1, r.client, r.type, r.status, r.staff, r.paid, r.received, r.wages, r.date, r.file_no, r.phone, r.notes, r.created_by_email, r.updated_by_email]);
     const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(c => '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"').join(',')).join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
